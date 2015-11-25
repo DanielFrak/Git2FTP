@@ -1,0 +1,275 @@
+* {
+    margin:0;
+    padding:0;
+}
+html{
+    height: 100%;
+}
+body {
+    background-color: #aaa;
+    color: #222;
+    font-family: 'Open Sans', sans-serif;
+    
+    /* IE10 Consumer Preview */ 
+    background-image: -ms-linear-gradient(top, #BFBFBF 0%, #999999 100%);
+
+    /* Mozilla Firefox */ 
+    background-image: -moz-linear-gradient(top, #BFBFBF 0%, #999999 100%);
+
+    /* Opera */ 
+    background-image: -o-linear-gradient(top, #BFBFBF 0%, #999999 100%);
+
+    /* Webkit (Safari/Chrome 10) */ 
+    background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #BFBFBF), color-stop(1, #999999));
+
+    /* Webkit (Chrome 11+) */ 
+    background-image: -webkit-linear-gradient(top, #BFBFBF 0%, #999999 100%);
+
+    /* W3C Markup, IE10 Release Preview */ 
+    background-image: linear-gradient(to bottom, #BFBFBF 0%, #999999 100%);
+    /*background-color: #7b7d79;*/
+    background-repeat: repeat-x;
+    background-color: #999999;
+}
+
+#topmenu{
+    width: 100%;
+    height: 64px;
+    background-color: #efefef;
+    margin: 0;
+    padding: 0;
+    border-bottom: 2px solid #999;
+    position: fixed;
+    z-index: 999;
+    top: 0;
+}
+.wrapper-top{
+    max-width: 1200px;
+    margin:auto;
+    padding: 6px;
+}
+.logo{
+    font-family: 'Lato', sans-serif;
+    font-weight: 900;
+    font-style: normal;
+    font-size: 25px;
+    position:relative;
+    top: 10px;
+    cursor: default;
+}
+.menu-opt{
+    float: left;
+    margin-right: 10px;
+}
+
+.wrapper {
+    max-width: 1200px;
+    margin: auto;
+    background-color: #efefef;
+    padding: 20px;
+    position: relative;
+}
+
+.wrapper-round{
+    border-radius: 5px;
+    margin-top:80px;
+    /*margin-top:20px;*/
+}
+
+
+h1, h2{
+    text-transform: uppercase;
+    font-family: 'Lato', sans-serif;
+}
+h1{
+    font-weight: 900;
+    font-size: 60px;
+}
+h2{
+    font-weight: 700;
+    font-size: 30px;
+}
+
+#form input:hover, .button:hover{
+    cursor: pointer;
+}
+#form input:hover, #form textarea:hover, #form select:hover, .button:hover{
+    border-color: #666;
+}
+
+#form input, .button {
+    text-transform: uppercase;
+}
+#form input, #form textarea, #form select, .button {
+    font-family: 'Lato', sans-serif;
+    /*font-weight: bold;*/
+    font-style: normal;
+    font-size: 15px;
+    outline: none;
+    margin: 5px 0;
+}
+
+#form input[type="checkbox"]{
+    margin-right: 5px;
+}
+
+#form input[type="text"], #form select, #form textarea, .button {
+    border: 1px solid #999;
+    border-radius: 5px;
+    
+    background: #e5e5e5; /* Old browsers */
+    background: -moz-linear-gradient(top,  #e5e5e5 0%, #ffffff 100%); /* FF3.6+ */
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#e5e5e5), color-stop(100%,#ffffff)); /* Chrome,Safari4+ */
+    background: -webkit-linear-gradient(top,  #e5e5e5 0%,#ffffff 100%); /* Chrome10+,Safari5.1+ */
+    background: -o-linear-gradient(top,  #e5e5e5 0%,#ffffff 100%); /* Opera 11.10+ */
+    background: -ms-linear-gradient(top,  #e5e5e5 0%,#ffffff 100%); /* IE10+ */
+    background: linear-gradient(to bottom,  #e5e5e5 0%,#ffffff 100%); /* W3C */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#e5e5e5', endColorstr='#ffffff',GradientType=0 ); /* IE6-9 */
+    
+    padding: 12px;
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+}
+
+#form select{
+    background-size: 200%;
+    background-position: center;
+}
+
+#form input:focus, #form select:focus, #form textarea:focus, .button:focus {
+    border-color: #63a0cb;
+}
+
+#form textarea {
+    height:250px;
+    width:100%;
+}
+
+hr{
+    border: 1px solid #999;
+}
+
+.successMsg, .infoMsg, .warningMsg, .errorMsg{
+    font-family: 'Lato', sans-serif;
+    font-size: 16px;
+    
+    -webkit-transition: padding 0.25s; /* For Safari 3.1 to 6.0 */
+    transition: padding .25s;
+    
+    cursor: default;
+    border-radius: 5px;
+    display: block;
+    
+    padding: 10px 15px;
+    color: white;
+    /*font-weight:bold;*/
+    margin: 10px 0;
+    
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.successMsg {
+    /*background: #05D005;*/
+    background: #7ebc56;
+}
+.infoMsg {
+    background: #63a0cb;
+}
+.warningMsg {
+    /*background: #8b1820;*/
+    background: #e5a80b;
+}
+.errorMsg {
+    /*background: #8b1820;*/
+    background: #aa3939;
+}
+
+.successMsg:hover, .infoMsg:hover, .warningMsg:hover, .errorMsg:hover{
+    padding-left: 20px; 
+}
+
+
+a{
+    display: inline-block;
+    text-decoration: none;
+    font-style: italic;
+    color: #222;
+    /*background-color: #f8e043;*/
+}
+
+a:hover{
+    color: #b40e06;
+}
+
+.button{
+    display: inline-block;
+    border: 1px solid #999;
+    border-radius: 5px;
+    
+    padding: 12px;
+    
+    background: #ffffff; /* Old browsers */
+    background: -moz-linear-gradient(top,  #ffffff 0%, #e5e5e5 100%); /* FF3.6+ */
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#ffffff), color-stop(100%,#e5e5e5)); /* Chrome,Safari4+ */
+    background: -webkit-linear-gradient(top,  #ffffff 0%,#e5e5e5 100%); /* Chrome10+,Safari5.1+ */
+    background: -o-linear-gradient(top,  #ffffff 0%,#e5e5e5 100%); /* Opera 11.10+ */
+    background: -ms-linear-gradient(top,  #ffffff 0%,#e5e5e5 100%); /* IE10+ */
+    background: linear-gradient(to bottom,  #ffffff 0%,#e5e5e5 100%); /* W3C */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', endColorstr='#e5e5e5',GradientType=0 ); /* IE6-9 */
+}
+
+.button:hover{
+    color: #fff;
+    background: #7ebc56;
+}
+
+.button-big{
+    font-size: 25px!important;
+    padding: 25px!important;
+    font-weight: 900!important;
+}
+
+#footer{
+    text-align: center;
+    font-size: 14px;
+    cursor: default;
+}
+#footer, #footer a{
+    color: #999!important;
+}
+
+@media screen and (max-width: 1280px) {
+    .wrapper {
+        margin-left: 20px;
+        margin-right: 20px;
+    }
+@media screen and (max-width: 800px) {
+    #topmenu {
+        height: auto;
+        position: relative;
+    }
+    .wrapper-top{
+        text-align: center;
+    }
+    .wrapper-round{
+        margin-top: 20px;
+    }
+    .menu-opt{
+        margin: auto;
+        float: none;
+    }
+    .logo{
+        top: 0px;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    h1{
+        font-size: 30px;
+    }
+    h2{
+        font-size: 20px;
+    }
+}
