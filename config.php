@@ -23,6 +23,3 @@
     $sanitization_regex = '/^(M|A)\s+/'; //REGEX used when sanitizing the lines of the diff text
     
     $scriptName = "git2ftp.sh"; //The name of the git2ftp shell script
-    
-    //constants
-    const MSG_PROCESSED = "PROCESSED";

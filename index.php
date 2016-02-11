@@ -9,91 +9,97 @@
     session_start();
 
     require_once 'config.php';
+    require_once "Models/FTPClient.php";
+    require_once "Models/MessageHandler.php";
+    require_once "Models/DiffParser.php";
 
-    //Get session messages and delete them from the session
-    if(isset($_SESSION['messages'])){
-        $messages_session = $_SESSION['messages'];
-        $_SESSION['messages'] = null;
-    } else {
-        $messages_session=array();
-    }
-    //END session messages
-
+    //Create the Message Handler to handle local and session messages
+    $msg_handler = new MessageHandler();
+    
     //Download current commit info from server 
     if(isset($_GET['action']) && $_GET['action']=='get_commit'){
         if(isset($_GET['ftp'])){
             $ftpName = $_GET['ftp'];
-            if(in_array($ftpName, array_keys($ftp))){
+            if(in_array($ftpName, array_keys($ftp))){                
+                $ftp_client = new FTPClient($ftp[$ftpName]['host'], $ftp[$ftpName]['port'], $ftp[$ftpName]['usr'], $ftp[$ftpName]['pwd'], $remotePath);
                 //Download commit info file from remote:
-                if($conn_id = ftp_connect($ftp[$ftpName]['host'], $ftp[$ftpName]['port'])){ //Connect to FTP
-                    if(ftp_login($conn_id, $ftp[$ftpName]['usr'], $ftp[$ftpName]['pwd'])){ //Log in
-                        $contents_on_server = ftp_nlist($conn_id, $remotePath."git2ftp/");
-                        var_dump($contents_on_server);
-                        if(in_array($remotePath."git2ftp/commit_remote.txt", $contents_on_server)){
-                            if(ftp_get($conn_id, "commit_production.txt", $remotePath."git2ftp/commit_remote.txt", FTP_ASCII)){ //Get file from FTP
-                                $messages_session[] = ['successMsg', "Successfuly downloaded info file from remote."];
-                            }
+                try {
+                    $ftp_client->connect();
+                    $contents_on_server = $ftp_client->getFileList('git2ftp');
+                    if(in_array($remotePath."git2ftp/commit_remote.txt", $contents_on_server)){
+                        if($ftp_client->downloadFile("commit_production.txt", "git2ftp/commit_remote.txt")){
+                            $msg_handler->addSuccessMessage("Successfuly downloaded info file from remote.");
                         } else {
-                            $messages_session[] = ['warningMsg', "The info file is not present on remote server."];
+                            $msg_handler->addErrorMessage("The info file could not be downloaded from the remote server.");
                         }
                     } else {
-                        $messages_session[] = ['errorMsg', "Failed to log in to FTP."];
+                        $msg_handler->addWarningMessage("The info file is not present on remote server.");
                     }
-                } else {
-                    $messages_session[] = ['errorMsg', "Could not establish FTP connection."];
                 }
+                catch(FTPClientException $e){
+                    $msg_handler->addErrorMessage($e->getMessage());
+                }
+                
             } else {
-                $messages_session[] = ['errorMsg', "Selected FTP doesn't exist in config."];
+                $msg_handler->addErrorMessage("Selected FTP doesn't exist in config.");
             }
         } else {
-            $messages_session[] = ['errorMsg', "FTP not chosen."];
+            $msg_handler->addErrorMessage("FTP not chosen.");
         }
-        $_SESSION['messages'] = $messages_session;
+        
+        $msg_handler->update(); //Update the SESSION messages variable
         header("location:" . $main_url . "index.php");
         exit;
     }
 
-    if (file_exists($diffFile)) {
-        $fileContents = file_get_contents($diffFile);
-        if($fileContents){
-            $listLines = explode("\n", $fileContents);
-            if($listLines[sizeof($listLines)-1]==constant('MSG_PROCESSED')){
-                $messages_local[] = ['infoMsg', "<strong>diff.txt</strong> file found, but already processed.<br>"];
-            } else {
+    //Try to parse the diff file (if one exists)
+    $diff_parser = new DiffParser();
+    try{
+        $parse_result = $diff_parser->tryLoadFile($diffFile);
+        if($parse_result !== false){
+            if($parse_result === true){ //Diff file found and processed
                 $message = "<strong>diff.txt file found. Contents:</strong><i>";
-                foreach($listLines as $line){
+                foreach($diff_parser->getDiffFiles() as $line){
                     $message .= "<br>".$line;
                 }
                 $message .= "</i>";
-                $messages_local[] = ['infoMsg', $message];
+                $msg_handler->addInfoMessage($message, true);
+            } else if($parse_result === -1){ //Diff file found but empty
+                $msg_handler->addWarningMessage("<strong>".$diffFile."</strong> file is empty. Run <strong>{$scriptName}</strong>.", true);
+            } else { //Diff file found but already processed ($parse_result === 0)
+                $msg_handler->addInfoMessage("<strong>".$diffFile."</strong> file found, but already processed.<br>", true);
             }
         } else {
-            $messages_local[] = ['warningMsg', "<strong>diff.txt</strong> file is empty. Run <strong>{$scriptName}</strong>."];
+            $msg_handler->addWarningMessage("<strong>".$diffFile."</strong> file not found. Run <strong>{$scriptName}</strong>.", true);
         }
-        $listLines = explode("\n", $fileContents);
-    } else {
-        $messages_local[] = ['warningMsg', "<strong>diff.txt</strong> file not found. Run <strong>{$scriptName}</strong>."];
+    }
+    catch(DiffParserException $e){
+        $msg_handler->addErrorMessage($e->getMessage());
     }
 
+    //Get local commit info
     if (file_exists("commit.txt")) {
         $commit = file_get_contents("commit.txt");
-        $messages_local[] = ['infoMsg', "<strong>DIFF commit:</strong> ".$commit];
+        $msg_handler->addInfoMessage("<strong>Local commit:</strong> ".$commit, true);
     }
+    //Get production commit info
     if (file_exists("commit_production.txt")) {
         $masterCommit = file_get_contents("commit_production.txt");
-        $messages_local[] = ['infoMsg', "<strong>Production commit:</strong> ".$masterCommit];
+        $msg_handler->addInfoMessage("<strong>Production commit:</strong> ".$masterCommit, true);
     }
 
+    //Display commit comparison result
     if($commit == $masterCommit){
         if($commit==""){
-            $messages_local[] = ['warningMsg', "<strong>DIFF</strong> and <strong>MASTER</strong> are empty. Prepare them by pasting the initial commit hash into commit.txt and commit_production.txt <strong>BEFORE</strong> running <strong>{$scriptName}</strong>."];
+            $msg_handler->addWarningMessage("<strong>DIFF</strong> and <strong>MASTER</strong> are empty. Prepare them by pasting the initial commit hash into commit.txt and commit_production.txt <strong>BEFORE</strong> running <strong>{$scriptName}</strong>.", true);
         } else {
-            $messages_local[] = ['warningMsg', "<strong>DIFF</strong> and <strong>MASTER</strong> commits are the same! No need to reupload."];
+            $msg_handler->addWarningMessage("<strong>DIFF</strong> and <strong>MASTER</strong> commits are the same! No need to reupload.", true);
         }
     } else {
-        $messages_local[] = ['infoMsg', "<strong>DIFF</strong> and <strong>MASTER</strong> commits are different. Upload suggested."];
+        $msg_handler->addInfoMessage("<strong>DIFF</strong> and <strong>MASTER</strong> commits are different. Upload suggested.", true);
     }
 
+    //Upload files to remote server
     if ( (isset($_POST["action"]) && $_POST["action"] == "process" ) || (isset($_GET['action']) && $_GET['action']=='upload') )
     {
         // misc internal vars
@@ -103,110 +109,96 @@
 
         $continue = true;
 
-        if(!isset($_POST['sendFromText'])){
-            if(file_exists($diffFile)){
-                if($listLines[sizeof($listLines)-1]==constant('MSG_PROCESSED')){
-                    $messages_session[] = ['errorMsg', "The diff file was already processed."];
+//        $diff_parser = new DiffParser();
+        if(!isset($_POST['sendFromText'])){            
+            try{
+                $parse_result = $diff_parser->tryLoadFile($diffFile);
+                if($parse_result !== false){
+//                    if($parse_result === true){ //Diff file found and processed
+//                        $listLines = $diff_parser->getDiffFiles(); //TEMPORARY!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//                    } else
+                    if($parse_result === -1){ //Diff file found but empty
+                        $msg_handler->addWarningMessage("<strong>".$diffFile."</strong> file is empty.", true);
+                        $continue = false;
+                    } else { //Diff file found but already processed ($parse_result === 0)
+                        $msg_handler->addInfoMessage("<strong>".$diffFile."</strong> file was already processed.<br>", true);
+                        $continue = false;
+                    }
+                } else {
+                    $msg_handler->addWarningMessage("<strong>".$diffFile."</strong> file not found.", true);
                     $continue = false;
                 }
-            } else {
-                $messages_session[] = ['errorMsg', "The diff file is empty."];
-                $continue = false;
+            }
+            catch(DiffParserException $e){
+                $msg_handler->addErrorMessage($e->getMessage());
             }
         } else {
-            $listLines = explode("\n", $_POST["listOfFiles"] );
+            $diff_parser->setDiffFiles(explode("\n", $_POST["listOfFiles"]));
         }
 
         if($continue){
-            if ( !empty($listLines) )
-            {
-                // remove and sanitize all the lines:
-                foreach($listLines as $line )
-                {
-                    $line = preg_replace ( $sanitization_regex, '', trim($line) );
-
-                    if (!$line ){
-                        continue;
-                    }
-
-                    $linesSubmited++;
-
-                    if (file_exists( $localPath . $line ) ){ //If file exists locally
-                        $sanitizedLines[] = $line;
-                    }
-                }
-
-            }
-
-            if ( isset($sanitizedLines) && !empty($sanitizedLines) ) //If there are files to upload:
+            if($diff_parser->trySanitize($linesSubmited)) //If there are files to upload
             {
                 $ftpName = $_POST["server"] ? $_POST["server"] : $_GET['ftp'];
-                if($conn_id = ftp_connect($ftp[$ftpName]['host'], $ftp[$ftpName]['port'])){ //Connect to FTP
-                    if(ftp_login($conn_id, $ftp[$ftpName]['usr'], $ftp[$ftpName]['pwd'])){ //Log in
-                        //File upload
-                        foreach ($sanitizedLines as $fileToUpload )
-                        {
-                            $fileToUploadLocalPath = $localPath . $fileToUpload;
-                            $fileToUploadRemotePath = $remotePath . $fileToUpload;
+                
+                $ftp_client = new FTPClient($ftp[$ftpName]['host'], $ftp[$ftpName]['port'], $ftp[$ftpName]['usr'], $ftp[$ftpName]['pwd'], $remotePath);
+                
+                try {
+                    $ftp_client->connect();
+                    //File upload
+                    foreach ($diff_parser->getSanitizedLines() as $fileToUpload )
+                    {
+                        $fileToUploadLocalPath = $localPath . $fileToUpload;
+                        $fileToUploadRemotePath = $remotePath . $fileToUpload;
 
-                            $files2Upload++;
-                            $upload = ftp_put($conn_id, $fileToUploadRemotePath, $fileToUploadLocalPath, FTP_ASCII); //Upload the file
-                            if (!$upload ){ //Couldn't upload
-                                $failedUploadFiles[] = $fileToUpload;
-                            }
-                            else {
-                                $filesUploaded++;
-                            }
-                        }
-
-                        ftp_close($conn_id); //Close the FTP stream
-
-                        if (empty($failedUploadFiles) ){ //If every file uploaded successfully
-                            $messages_session[] = ['successMsg', "Upload successful. Lines submitted: <b>$linesSubmited</b>. Files found: <b>$files2Upload</b>. Files uploaded: <b>$filesUploaded</b>."];
-
-                            if(isset($fileContents)){
-                                $fileContents.="\n".constant('MSG_PROCESSED');
-                                file_put_contents($diffFile, $fileContents);
-                            }
-
-                            if(isset($commit)){
-                                file_put_contents("commit_production.txt", $commit);
-                            }
+                        $files2Upload++;
+                        $upload = $ftp_client->uploadFile($fileToUploadRemotePath, $fileToUploadLocalPath); //Upload the file
+                        if (!$upload ){ //Couldn't upload
+                            $failedUploadFiles[] = $fileToUpload;
                         }
                         else {
-                            if (!empty($failedUploadFiles) )
-                            {
-                                echo "FAILED UPLOAD FILES: <br><br>";
-                                echo "<pre>";
-                                print_r($failedUploadFiles);
-                                echo "</pre>";
-                                echo "<br><br>";
-                                $message = "FAILED UPLOAD FILES: <br><br>";
-                                $message .= "<pre>";
-                                $message .= print_r($failedUploadFiles, true);
-                                $message .= "</pre>";
-                                $messages_session[] = ['errorMsg', $message];
-                            }
+                            $filesUploaded++;
                         }
-                    } else {
-                         $messages_session[] = ['errorMsg', "Failed to log in to FTP."];
                     }
-                } else {
-                    $messages_session[] = ['errorMsg', "Could not establish FTP connection."];
+
+                    $ftp_client->disconnect();
+
+                    if (empty($failedUploadFiles) ){ //If every file uploaded successfully
+                        $msg_handler->addSuccessMessage("Upload successful. Lines submitted: <b>$linesSubmited</b>. Files found: <b>$files2Upload</b>. Files uploaded: <b>$filesUploaded</b>.");
+
+                        if($diff_parser->didFileLoad()){
+                            $diff_parser->fileSaveAsProcessed();
+                        }
+
+                        if(isset($commit)){
+                            file_put_contents("commit_production.txt", $commit);
+                        }
+                    }
+                    else {
+                        if (!empty($failedUploadFiles) )
+                        {
+                            $message = "FAILED UPLOAD FILES: <br><br>";
+                            $message .= "<pre>";
+                            $message .= print_r($failedUploadFiles, true);
+                            $message .= "</pre>";
+                            $msg_handler->addErrorMessage($message);
+                        }
+                    }
+                }
+                catch(FTPClientException $e){
+                    $msg_handler->addErrorMessage($e->getMessage());
                 }
             }
             else
             {
-                $messages_session[] = ['successMsg', "No files to upload."];
+                $msg_handler->addSuccessMessage("No files to upload.");
             }
         }
 
-        $_SESSION['messages'] = $messages_session;
+        $msg_handler->update();
         header("location:".$main_url."index.php");
         exit;
     }
-
-    $messages = array_merge($messages_session, $messages_local);
 ?>
 
 <!doctype html>
@@ -270,6 +262,7 @@
         <br>
 
         <?php
+            $messages = $msg_handler->getMessages();
             if (isset($messages) )
             {
                 foreach($messages as $msg):
